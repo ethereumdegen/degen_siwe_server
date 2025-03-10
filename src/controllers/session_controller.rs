@@ -49,14 +49,12 @@ use degen_siwe_server::db::postgres::models::auth_sessions_model::{
     AuthSession, AuthSessionsModel,
 };
 use ethers::types::Address;
-use serde::{Deserialize, Serialize};
-
-use crate::controllers::web_controller::AuthResponse;
+use serde::{Deserialize, Serialize}; 
 
 use super::web_controller::WebController;
 use degen_siwe_server::app_state::AppState;
 
-use crate::controllers::web_controller::AuthSessionOutput;
+use crate::controllers::web_controller::{AuthSessionOutput, ErrorResponse, SuccessResponse};
 
 pub struct SessionController {}
 
@@ -101,11 +99,10 @@ async fn generate_challenge(
     println!(" public_address_str {} ", public_address_str);
 
     let Ok(public_address) = public_address_str.parse::<Address>() else {
-        return HttpResponse::BadRequest().json(ChallengeResponse {
-            success: false,
-            challenge: None,
-            error: Some("Invalid public address".to_string()),
-        });
+        return HttpResponse::BadRequest().json(
+
+            ErrorResponse::new( "Invalid public address"  )
+          );
     };
 
     let service_name = & app_state.app_config.service_name; 
@@ -116,16 +113,15 @@ async fn generate_challenge(
         AuthChallengesModel::insert_one(new_challenge.clone(), &app_state.database).await;
 
     match inserted {
-        Ok(_) => HttpResponse::Ok().json(ChallengeResponse {
-            success: true,
-            challenge: Some(new_challenge.challenge.clone()),
-            error: None,
-        }),
-        Err(_) => HttpResponse::InternalServerError().json(ChallengeResponse {
-            success: false,
-            challenge: None,
-            error: Some("Database error".to_string()),
-        }),
+        Ok(_) => HttpResponse::Ok().json(
+
+            SuccessResponse::new( new_challenge.challenge.clone() ) 
+
+           ),
+        Err(_) => HttpResponse::InternalServerError().json(
+
+            ErrorResponse::new( "Database error"  ) 
+       ),
     }
 }
 
@@ -140,11 +136,11 @@ async fn validate_authentication(
    // println!(" public_address_str {} ", public_address_str);
 
     let Ok(public_address) = public_address_str.parse::<Address>() else {
-        return HttpResponse::BadRequest().json(ChallengeResponse {
-            success: false,
-            challenge: None,
-            error: Some("Invalid public address".to_string()),
-        });
+        return HttpResponse::BadRequest().json(
+
+             ErrorResponse::new( "Invalid public address"  ) 
+
+          );
     };
 
     let challenge_record =
@@ -154,29 +150,28 @@ async fn validate_authentication(
 
     if let Ok(record) = challenge_record {
         if &record.challenge != challenge {
-            return HttpResponse::Unauthorized().json(AuthResponse::<String> {
-                success: false,
-                data: None,
-                error: Some("Invalid challenge".to_string()),
-            });
+            return HttpResponse::Unauthorized().json(
+
+                ErrorResponse::new( "Invalid challenge"  ) 
+
+               );
         }
     } else {
-        return HttpResponse::Unauthorized().json(AuthResponse::<String> {
-            success: false,
-            data: None,
-            error: Some("No active challenge found".to_string()),
-        });
+        return HttpResponse::Unauthorized().json(
+
+              ErrorResponse::new( "No active challenge found"  ) 
+            );
     }
 
     // Verify signature
     let recovered_address = recover_address(challenge, signature);
 
     if recovered_address.as_deref() != Some(public_address_str.as_str()) {
-        return HttpResponse::Unauthorized().json(AuthResponse::<String> {
-            success: false,
-            data: None,
-            error: Some("Invalid signature".to_string()),
-        });
+        return HttpResponse::Unauthorized().json(
+
+               ErrorResponse::new( "Invalid signature"  )  
+
+            );
     }
 
     let expires_in_days = 1;
@@ -196,17 +191,19 @@ async fn validate_authentication(
                 expires_at: new_user_session.expires_at.timestamp(),
             };
 
-            HttpResponse::Ok().json(AuthResponse {
-                success: true,
-                data: Some(session_data_output),
-                error: None,
-            })
+            HttpResponse::Ok().json(
+
+                  SuccessResponse::new( session_data_output ) 
+
+
+            )
         }
-        Err(_) => HttpResponse::InternalServerError().json(AuthResponse::<String> {
-            success: false,
-            data: None,
-            error: Some("Database error".to_string()),
-        }),
+        Err(_) => HttpResponse::InternalServerError().json(
+
+               ErrorResponse::new( "Database error"  )  
+
+
+           ),
     }
 }
 

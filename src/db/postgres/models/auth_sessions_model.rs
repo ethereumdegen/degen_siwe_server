@@ -81,33 +81,7 @@ impl AuthSessionsModel {
             }
         }
     }
-
-    /// Retrieves an active session for a given public address and session token.
-    /*   pub async fn find_one(
-        public_address: Address,
-        session_token: String,
-        psql_db: &  Database,
-    ) -> Result<AuthSession, PostgresModelError> {
-        let result = psql_db
-            .query_one_with_reconnect(
-                "SELECT * FROM user_sessions
-                 WHERE public_address = $1
-                 AND session_token = $2
-                 AND expires_at > NOW()
-                 LIMIT 1;",
-                &[&DomainEthAddress(public_address), &session_token],
-            )
-            .await;
-
-        match result {
-            Ok(row) => AuthSession::from_row(&row),
-            Err(e) => {
-                eprintln!("{}", e);
-                Err( e )
-            }
-        }
-    }*/
-
+ 
     pub async fn find_one(
         session_token: String,
         psql_db: &Database,
@@ -131,8 +105,8 @@ impl AuthSessionsModel {
         }
     }
 
-    /// Deletes an expired session for a given public address.
-    pub async fn delete_expired(
+    
+    /*pub async fn delete_expired(
         public_address: Address,
         psql_db: &Database,
     ) -> Result<(), PostgresModelError> {
@@ -150,7 +124,7 @@ impl AuthSessionsModel {
                 Err(e.into())
             }
         }
-    }
+    }*/
 }
 
 pub async fn validate_session_token(
